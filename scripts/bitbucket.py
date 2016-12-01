@@ -63,7 +63,7 @@ if 'scripts.bitbucket' != __name__:
         print('[]')
         sys.exit(0)
     elif 'in' in sys.argv[0]:
-        print('{ "version": { ref: "none" } }')
+        print(json.dumps({"version": {"ref": "none"}}))
         sys.exit(0)
 
     j = parse_stdin()
@@ -118,7 +118,16 @@ if 'scripts.bitbucket' != __name__:
         err("Notifying %s that build %s is in status: %s" %
             (post_url, os.environ["BUILD_NAME"], build_status))
 
-    build_url = "{url}/pipelines/{pipeline}/jobs/{jobname}/builds/{buildname}".format(
+    team = ""
+    try:
+        team=os.environ['BUILD_TEAM_NAME']
+        if team:
+            team= "/teams/" + team
+    except KeyError, e:
+        err("Older Concourse version - no teams")
+
+    build_url = "{url}" + team + "/pipelines/{pipeline}/jobs/{jobname}/builds/{buildname}"
+    build_url = build_url.format(
             url=os.environ['ATC_EXTERNAL_URL'],
             pipeline=os.environ['BUILD_PIPELINE_NAME'],
             jobname=os.environ['BUILD_JOB_NAME'],
@@ -135,7 +144,8 @@ if 'scripts.bitbucket' != __name__:
     }
 
     if debug:
-        err(json_pp(js))
+        err(json.dumps(js))
+        err(post_url)
 
     r = post_result(post_url, username, password, verify_ssl, js, debug)
     if r.status_code != 204:
@@ -144,6 +154,6 @@ if 'scripts.bitbucket' != __name__:
     status_js = {"version": {"ref": commit_sha}}
 
     if debug:
-        err("Returning to concourse:\n" + json_pp(status_js))
+        err("Returning to concourse:\n" + json.dumps(status_js))
 
     print(json.dumps(status_js))
